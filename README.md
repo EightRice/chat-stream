@@ -1,61 +1,37 @@
-# Chat Stream – Real‑Time Community‑Sentiment Synthesizer
+# Chat Stream
 
-We live in an age where a single live‑stream can generate tens of thousands of chat messages per hour. Human moderators, analysts, and even streamers themselves cannot keep up, let alone spot the actionable threads of agreement, dissent, or fresh ideas hidden inside the torrent. **Chat Stream turns that flood into a rolling, two‑sentence “headline” with an explicit sentiment bar and a confidence score, refreshing twice per second.** The result is a heads‑up display for large‑scale conversation: producers get instant feedback loops, viewers see that their voice contributes, and downstream dashboards can trigger alerts or overlay statistics in real time.
+A minimal demo that summarizes live chat messages from YouTube or Twitch. It collects chat messages, generates a short rolling summary with sentiment, and displays the result in a small Streamlit dashboard.
 
-### Value Proposition
-*   **Speed & Scale** – Handles a sustained 20 messages/second (100× a typical Twitch chat) on commodity hardware or a medium cloud instance.  
-*   **Transparency** – Outputs a confidence score plus exposure of raw bucket summaries for auditability—no black‑box claims.  
-*   **Modularity** – Models are hot‑swappable at runtime; choose open‑weights offline models for privacy or paid LLM APIs for peak quality.  
-*   **Cost Control** – Bucketing and fractal aggregation keep inference calls proportional to message entropy rather than volume, driving down token spend by 90 % in stress tests.  
-*   **Interoperability** – Emits both JSON and WebSocket streams for easy overlay in OBS, Discord bots, or custom dashboards.
+## Features
 
-### High‑Level Architecture
-stdin (raw chat) → ring‑buffer → topic & time bucketer
-→ sentiment model (RoBERTa‑tiny) + summary model (Long‑T5 or OpenAI turbo)
-→ snapshot assembler {summary, ±%, conf}
-→ fractal aggregator (5 s → 1 min → 10 min)
-→ sinks (CLI, WebSocket, Prometheus)
+- Fetch chat messages from a YouTube or Twitch livestream
+- Two‑sentence summary computed with a lightweight LSA model
+- Average sentiment using VADER
+- Confidence score based on message repetition
+- Streamlit UI showing the latest message, summary and sentiment bar
 
-shell
-Copy
+## Project Layout
 
-### Repository Layout
-TERMS.md contractual terms, milestones, and penalties
-src/ reference Python 3.11 implementation
-└── chatstream/
-├── ingest.py async WebSocket / stdin readers
-├── bucket.py time+semantic bucketing logic
-├── models.py pluggable wrappers (local, HF, OpenAI)
-├── aggregate.py fractal tree reducer
-└── sinks.py CLI & WebSocket publishers
-benchmarks/ latency + ROUGE evaluation harness
-docs/ architecture diagrams & API schema (OpenAPI 3.1)
-submissions/ folder where contractors place final artefacts
+```
+src/chatstream/
+    __init__.py
+    ingest.py     # utilities for fetching live chat
+    summarize.py  # rolling summarization logic
+streamlit_app.py  # Streamlit dashboard
+tests/            # small unit tests
+```
 
-markdown
-Copy
+## Quick Start
 
-### Quick‑Start for Contributors
-1. `make dev` spins up **Poetry**, **ruff**, and **pre‑commit**.  
-2. Copy `.env.example` to `.env` and drop any API keys (optional).  
-3. Run `python -m chatstream.demo` to follow a prerecorded YouTube chat dump and watch live summaries refresh in the terminal.  
-4. Add a new model by subclassing `BaseModel` in `models.py`; hot‑swap with `--llm mymodel` at runtime.
+1. Install dependencies:
+   ```bash
+   pip install streamlit pytchat twitchio nltk sumy
+   ```
+   NLTK will download some data on first run.
+2. Launch the dashboard:
+   ```bash
+   streamlit run streamlit_app.py
+   ```
+3. Paste a live YouTube or Twitch URL and (for Twitch) an OAuth token.
 
-### Definition of Done
-The project is “done” when all criteria below are met and verified by the arbiter’s CI pipeline:
-
-* Throughput ≥20 msgs/s sustained for 60 minutes on an 8 vCPU, 16 GB RAM VM; ≤200 ms 95ᵗʰ‑percentile end‑to‑end latency.  
-* Average ROUGE‑L ≥0.25 against a 1 000‑window human‑curated gold set; macro‑F1 (pos/neg/neutral) ≥0.85 for sentiment.  
-* Memory footprint <4 GB RSS during stress test; queue back‑pressure never exceeds 1 000 pending messages.  
-* Hot‑swap demo: replace summarizer at runtime with no stream interruption (<2 seconds frozen output).  
-* Complete code coverage ≥80 %, lint‑clean (`ruff --fix`) and type‑checked (`mypy --strict`).  
-* Documentation: architecture diagram (SVG), API schema (OpenAPI), and operator run‑book (Markdown) all live in `docs/`.  
-* Reproducible Docker build (`docker build . && docker run chatstream demo`) matches performance numbers.  
-* All artefacts, benchmark logs, and a signed checksum bundle are pushed to `submissions/` for on‑chain hash anchoring.  
-* The arbiter’s automated job tags the repo as `v1.0.0` and signs off in the Trustless Business interface.
-
-### Roadmap Beyond v1
-Post‑contract tickets (outside current scope) include multilingual support, toxicity filters, and a React overlay component.
-
-### License & Governance
-Dual‑licensed MIT + Business Source; model weights follow upstream licenses. Governance decisions (mode
+Run `pytest` to execute the unit tests.
